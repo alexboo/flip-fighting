@@ -18,9 +18,9 @@ music.volume = 0.6;
 
 // Фоновые изображения
 const backgrounds = [
-    'background1.webp',
-    'background2.webp',
-    'background3.webp',
+    'fbackground_1.png',
+    'fbackground_2.png',
+    'fbackground_3.png',
 ];
 const background = new Image();
 background.src = backgrounds[Math.floor(Math.random() * backgrounds.length)];
@@ -43,8 +43,8 @@ class Fighter {
     constructor(x, y, sprite, controls, isAI = false) {
         this.x = x;
         this.y = y;
-        this.width = 200;
-        this.height = 200;
+        this.width = 300;
+        this.height = 300;
         this.sprite = sprite;
         this.image = new Image();
         this.image.src = sprite;
@@ -211,7 +211,7 @@ class Fighter {
                 this.y + this.height > opponent.y &&
                 this.y < opponent.y + opponent.height
             ) {
-                opponent.state = 'hit';
+                // opponent.state = 'hit';
                 if (opponent.isAI) {
                     punch1.play();
                 } else {
@@ -225,9 +225,6 @@ class Fighter {
                     damage = 7;
                 }
                 opponent.health -= damage;
-                if (opponent.health <= 0) {
-                    opponent.state = 'knockout';
-                }
             }
         }
     }
@@ -253,7 +250,7 @@ class Fighter {
                 this.y + this.height > opponent.y &&
                 this.y < opponent.y + opponent.height
             ) {
-                opponent.state = 'hit';
+                // opponent.state = 'hit';
                 if (opponent.isAI) {
                     punch1.play();
                 } else {
@@ -267,9 +264,6 @@ class Fighter {
                     damage = 7;
                 }
                 opponent.health -= damage;
-                if (opponent.health <= 0) {
-                    opponent.state = 'knockout';
-                }
             }
         }
     }
@@ -313,15 +307,8 @@ function showRoundIntro() {
 function update() {
 
     if (isRoundIntro) {
-        if (round > 1) {
-            setTimeout(() => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                showRoundIntro();
-            }, 3000);
-        } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            showRoundIntro();
-        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        showRoundIntro();
 
         return;
     }
@@ -329,15 +316,9 @@ function update() {
     ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
     player1.move(player2);
-    if (player1.health <= 0) {
-        player1.state = 'knockout';
-    }
     player1.draw();
 
     player2.move(player1);
-    if (player2.health <= 0) {
-        player2.state = 'knockout';
-    }
     player2.draw();
 
     if (player1.controls.attack) {
