@@ -27,6 +27,8 @@ background.src = backgrounds[Math.floor(Math.random() * backgrounds.length)];
 
 const attack1 = new Audio('attack.wav');
 const attack2 = new Audio('attack.wav');
+const kick1 = new Audio('kick.mp3');
+const kick2 = new Audio('kick.mp3');
 const punch1 = new Audio('punch.wav');
 const punch2 = new Audio('punch.wav');
 
@@ -41,15 +43,15 @@ class Fighter {
     constructor(x, y, sprite, controls, isAI = false) {
         this.x = x;
         this.y = y;
-        this.width = 128;
-        this.height = 128;
+        this.width = 200;
+        this.height = 200;
         this.sprite = sprite;
         this.image = new Image();
         this.image.src = sprite;
         this.frame = 0;
-        this.framesPerAnimation = 3;
-        this.frameWidth = 341;
-        this.frameHeight = 512;
+        this.framesPerAnimation = 4;
+        this.frameWidth = 470;
+        this.frameHeight = 574;
         this.frameCounter = 0;
         this.frameSpeed = 8;
         this.speed = 5;
@@ -103,7 +105,13 @@ class Fighter {
             this.frame++;
             if (this.frame >= this.framesPerAnimation) {
                 this.frame = 0;
-                if (this.state === 'attack') this.state = 'idle';
+                if (this.state === 'attack' || this.state === 'attack2') {
+                    this.state = 'idle';
+                    kick1.pause();
+                    kick1.currentTime = 0;
+                    kick2.pause();
+                    kick2.currentTime = 0;
+                }
             }
         }
 
@@ -112,9 +120,12 @@ class Fighter {
 
     getAnimationRow() {
         switch (this.state) {
-            case 'move': return 0;
-            case 'attack': return 512;
-            case 'jump': return 0;
+            case 'move': return 574;
+            case 'attack': return 574 * 2;
+            case 'attack2': return 574 * 3;
+            case 'jump': return 574;
+            case 'hit': return 574 * 4;
+            case 'knockout': return 574 * 5;
             default: return 0;
         }
     }
@@ -124,7 +135,7 @@ class Fighter {
             this.AIMovement(opponent);
         }
 
-        if (this.state !== 'attack') {
+        if (this.state !== 'attack' && this.state !== 'attack2' && this.state !== 'hit' && this.state !== 'knockout') {
             if (this.velocity.y < 0 || this.velocity.y > 0) {
                 this.state = 'jump';
             } else if (this.controls.left || this.controls.right) {
@@ -177,10 +188,14 @@ class Fighter {
         if (Math.random() < 0.02 && this.attackCooldown === 0) {
             this.attack(opponent);
         }
+
+        if (Math.random() < 0.02 && this.attackCooldown === 0) {
+            this.attack2(opponent);
+        }
     }
 
     attack(opponent) {
-        if (this.attackCooldown === 0 && this.state !== 'attack') {
+        if (this.attackCooldown === 0 && (this.state !== 'attack2' || this.state !== 'attack')) {
             this.state = 'attack';
             this.frame = 0;
             this.attackCooldown = 25;
@@ -196,6 +211,7 @@ class Fighter {
                 this.y + this.height > opponent.y &&
                 this.y < opponent.y + opponent.height
             ) {
+                opponent.state = 'hit';
                 if (opponent.isAI) {
                     punch1.play();
                 } else {
@@ -209,18 +225,64 @@ class Fighter {
                     damage = 7;
                 }
                 opponent.health -= damage;
+                if (opponent.health <= 0) {
+                    opponent.state = 'knockout';
+                }
+            }
+        }
+    }
+
+    attack2(opponent) {
+        if (this.attackCooldown === 0 && (this.state !== 'attack2' || this.state !== 'attack')) {
+            this.state = 'attack2';
+            this.frame = 0;
+            this.attackCooldown = 25;
+            if (opponent.isAI) {
+                kick1.pause();
+                kick1.currentTime = 0;
+                kick1.play();
+            } else {
+                kick2.pause();
+                kick2.currentTime = 0;
+                kick2.play();
+            }
+
+            if (
+                this.x + this.width > opponent.x &&
+                this.x < opponent.x + opponent.width &&
+                this.y + this.height > opponent.y &&
+                this.y < opponent.y + opponent.height
+            ) {
+                opponent.state = 'hit';
+                if (opponent.isAI) {
+                    punch1.play();
+                } else {
+                    punch2.play();
+                }
+                let damage = 10
+                if (opponent.isAI && round > 1 && opponent.roundWins === 0) {
+                    damage = 5;
+                }
+                if (opponent.isAI && round > 2) {
+                    damage = 7;
+                }
+                opponent.health -= damage;
+                if (opponent.health <= 0) {
+                    opponent.state = 'knockout';
+                }
             }
         }
     }
 }
 
-const player1 = new Fighter(100, 448, 'player1-sprite.webp', {
+const player1 = new Fighter(100, 448, 'player-sprite1.png', {
     left: false,
     right: false,
     jump: false,
     attack: false,
+    attack2: false,
 });
-const player2 = new Fighter(860, 448, 'player1-sprite.webp', {}, true);
+const player2 = new Fighter(860, 448, 'player-sprite1.png', {}, false);
 
 let round = 1;
 let isRoundIntro = true;
@@ -249,23 +311,41 @@ function showRoundIntro() {
 }
 
 function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (isRoundIntro) {
-        showRoundIntro();
+        if (round > 1) {
+            setTimeout(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                showRoundIntro();
+            }, 3000);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            showRoundIntro();
+        }
+
         return;
     }
 
     ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
     player1.move(player2);
+    if (player1.health <= 0) {
+        player1.state = 'knockout';
+    }
     player1.draw();
 
     player2.move(player1);
+    if (player2.health <= 0) {
+        player2.state = 'knockout';
+    }
     player2.draw();
 
     if (player1.controls.attack) {
         player1.attack(player2);
+    }
+
+    if (player1.controls.attack2) {
+        player1.attack2(player2);
     }
 
     ctx.fillStyle = 'green';
@@ -303,6 +383,7 @@ function handleInput(event, isKeyDown) {
         'd': () => player1.controls.right = isKeyDown,
         'w': () => player1.controls.jump = isKeyDown,
         ' ': () => player1.controls.attack = isKeyDown,
+        'v': () => player1.controls.attack2 = isKeyDown,
     };
 
     if (keyMap[event.key]) {
